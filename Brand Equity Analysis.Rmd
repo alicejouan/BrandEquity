@@ -8,28 +8,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-edit later 
-```{r, include=FALSE}
-install.packages("dplyr", repos = "http://cran.us.r-project.org")
-#install.packages("ggplot2", repos = "http://cran.us.r-project.org")
-#install.packages("nFactors", repos = "http://cran.us.r-project.org")
-#install.packages("FactoMineR", repos = "http://cran.us.r-project.org")
-#install.packages("tidyverse", repos = "http://cran.us.r-project.org")
-#install.packages("broom", repos = "http://cran.us.r-project.org")
-#install.packages("purrr", repos = "http://cran.us.r-project.org")
-library(dplyr) 
-library(ggplot2) 
-library(nFactors) 
-library(FactoMineR)
-library(tidyverse)
-library(broom)
-library(purrr)
-library(FactoMineR)
-library(scales)
-library(tidyr)
-```
-
-import the dataset and observe the data
+Import the dataset and observe the data
 ```{r}
 data = read.csv("moonshot.csv")
 ```
@@ -59,14 +38,14 @@ data_DV %>%
   select(where(is.numeric)) %>%
   cor()
 ```
-To further prove the finding, I ran an ANOVA to 
+Used ANOVA to further understand the difference between 3 potential indicators and it looks like the differences between variables are either not significant or small enough to ignore.
 
 ### ANOVA
 ```{r}
 library(scales)
 library(tidyr)
 data_rescale_DV = data_DV %>%
-  mutate(nps = rescale(nps, to = c(1,5)))
+  mutate(sentiment = rescale(sentiment, to = c(1,5)))
 
 data_rescale_DV_aov = data_rescale_DV %>% 
   select(where(is.numeric)) %>%
@@ -80,14 +59,16 @@ a = aov(value ~ DV, data = data_rescale_DV_aov)
 TukeyHSD(a)
   
 ```
-The differences between variables are either not significant or small enough to ignore.
-
 
 Given the relationship between three variables, I considered to combine NPS, sentiment, and intent into a brand equity indicator and I ran a Chronbach’s Alpha to validate the idea.
 
 ### Chronbach’s Alpha / Alpha Reliability
 ```{r}
-psych::alpha(data_DV)
+library(psych)
+
+data_DV %>%
+  select(where(is.numeric)) %>%
+  psych::alpha()
 ```
 The raw-alpha and std.alpha scores are both > 0.8, showing it’s better to consolidate the variables. Additionally, “Reliability if an item is dropped” statistics shows dropping either one of the variables will lower the alpha score, so I should consolidate all three variables.
 
