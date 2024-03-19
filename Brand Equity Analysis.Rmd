@@ -1,0 +1,110 @@
+---
+title: 'Brand Equity Analysis: Moonshot Clinical Systems'
+author: "Alice Lin"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+edit later 
+```{r, include=FALSE}
+install.packages("dplyr", repos = "http://cran.us.r-project.org")
+#install.packages("ggplot2", repos = "http://cran.us.r-project.org")
+#install.packages("nFactors", repos = "http://cran.us.r-project.org")
+#install.packages("FactoMineR", repos = "http://cran.us.r-project.org")
+#install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+#install.packages("broom", repos = "http://cran.us.r-project.org")
+#install.packages("purrr", repos = "http://cran.us.r-project.org")
+library(dplyr) 
+library(ggplot2) 
+library(nFactors) 
+library(FactoMineR)
+library(tidyverse)
+library(broom)
+library(purrr)
+library(FactoMineR)
+library(scales)
+library(tidyr)
+```
+
+import the dataset and observe the data
+```{r}
+data = read.csv("moonshot.csv")
+```
+
+```{r}
+library(dplyr) 
+data_check = data %>%
+  group_by(brand) %>%
+  summarise(count = n(), 
+            avg_nps = mean(nps),
+            avg_sentiment = mean(sentiment),
+            avg_intent = mean(intent))
+data_check
+```
+**add box plot**
+
+## 1. Determine Brand Equity Indicator
+
+NPS, sentiment, and intent are all potential indicator to brand equity, so I would like to run some analysis to determine the best way to determine the dependent variable for the following analysis.
+
+### Correlation Anaylsis
+First of all, I ran a correlation analysis to check the relationship between 3 potential indicators. According to the result, there are moderate positive relationships between 3 potential indicators (all coefficients are greater than 0.5).
+```{r}
+data_DV = select(data, c(2:5))
+
+data_DV %>%
+  select(where(is.numeric)) %>%
+  cor()
+```
+To further prove the finding, I ran an ANOVA to 
+
+### ANOVA
+```{r}
+library(scales)
+library(tidyr)
+data_rescale_DV = data_DV %>%
+  mutate(nps = rescale(nps, to = c(1,5)))
+
+data_rescale_DV_aov = data_rescale_DV %>% 
+  select(where(is.numeric)) %>%
+  pivot_longer(
+    everything(),
+    names_to = "DV",
+    values_to = "value"
+  ) 
+a = aov(value ~ DV, data = data_rescale_DV_aov)
+
+TukeyHSD(a)
+  
+```
+The differences between variables are either not significant or small enough to ignore.
+
+
+Given the relationship between three variables, I considered to combine NPS, sentiment, and intent into a brand equity indicator and I ran a Chronbach’s Alpha to validate the idea.
+
+### Chronbach’s Alpha / Alpha Reliability
+```{r}
+psych::alpha(data_DV)
+```
+The raw-alpha and std.alpha scores are both > 0.8, showing it’s better to consolidate the variables. Additionally, “Reliability if an item is dropped” statistics shows dropping either one of the variables will lower the alpha score, so I should consolidate all three variables.
+
+### New Brand Equity Indicator
+```{r}
+data_rescale_DV = mutate(data_rescale_DV, brand_equity = (nps+sentiment+intent)/3)
+
+brand_equity_stas = data_rescale_DV %>%
+  group_by(brand) %>%
+  summarise(avg_nps = mean(nps),
+            avg_sentiment = mean(sentiment),
+            avg_intent = mean(intent),
+            avg_brand_equity = mean(brand_equity))
+
+brand_equity_stas
+```
+
+The new brand equity indicator scales from 1~5. 
+
+**add a bar chart**
